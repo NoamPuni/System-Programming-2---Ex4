@@ -52,3 +52,15 @@ valgrind_test: $(TEST_TARGET)
 clean:
 	@echo "Cleaning up..."
 	@rm -rf $(BUILD_DIR)
+
+# --- Help Target ---
+help:
+	@echo "Makefile commands:"
+	@echo "  make all          - Build both Main application and unit tests"
+	@echo "  make Main        - Build and run the Main application"
+	@echo "  make test        - Build and run the unit tests"
+	@echo "  make valgrind    - Run Valgrind on the Main application"
+	@echo "  make valgrind test - Run Valgrind on the unit tests"
+	@echo "  make clean       - Clean build artifacts"
+	@echo "  make help        - Show this help message"
+# --- Default target ---

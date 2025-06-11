@@ -337,7 +337,7 @@ TEST_CASE("OrderIterator operations") {
     }
 }
 
-TEST_CASE("AscendingOrderIterator Comprehensive Tests") {
+TEST_CASE("AscendingOrderIterator Tests") {
 
     // Basic Operations and Expected Order
     SUBCASE("Iterating through elements in ascending order for various types") {
@@ -632,7 +632,7 @@ TEST_CASE("AscendingOrderIterator Comprehensive Tests") {
     }
 }
 
-TEST_CASE("DescendingOrderIterator Comprehensive Tests") {
+TEST_CASE("DescendingOrderIterator Tests") {
 
     // Basic Operations and Expected Order
     SUBCASE("Iterating through elements in descending order for various types") {
@@ -924,5 +924,225 @@ TEST_CASE("DescendingOrderIterator Comprehensive Tests") {
         CHECK(it2 == container.end_descending_order()); // Check against an end iterator of the same container 
 
         CHECK(it1 == it2); // Both are at their respective end positions
+    }
+}
+
+TEST_CASE("ReverseOrderIterator Tests") {
+    SUBCASE("ReverseOrderIterator on non-empty container") {
+        MyContainer<int> container;
+        container.addElement(10); // Index 0
+        container.addElement(20); // Index 1
+        container.addElement(30); // Index 2
+
+        // Test begin_reverse_order() and iteration
+        MyContainer<int>::ReverseOrderIterator it = container.begin_reverse_order();
+        CHECK(*it == 30); // Should be the last element (index 2)
+        ++it;
+        CHECK(*it == 20); // Should be the second to last element (index 1)
+        it++; // Test post-increment
+        CHECK(*it == 10); // Should be the first element (index 0)
+        ++it;
+
+        // Test end_reverse_order() and comparison
+        CHECK(it == container.end_reverse_order());
+        CHECK_FALSE(it != container.end_reverse_order());
+    }
+
+    SUBCASE("ReverseOrderIterator on empty container") {
+        MyContainer<int> container;
+
+        // begin_reverse_order() should be equal to end_reverse_order() for an empty container
+        MyContainer<int>::ReverseOrderIterator it_begin = container.begin_reverse_order();
+        MyContainer<int>::ReverseOrderIterator it_end = container.end_reverse_order();
+        CHECK(it_begin == it_end);
+        CHECK_FALSE(it_begin != it_end);
+
+        // Dereferencing an empty iterator should throw
+        // This is important because the loop condition `it != container.end_reverse_order()` prevents dereferencing `end_reverse_order()`
+        // but if someone manually tries to dereference begin_reverse_order() on an empty container.
+        CHECK_THROWS_AS(*it_begin, std::out_of_range);
+    }
+
+    SUBCASE("ReverseOrderIterator traversal and all elements access") {
+        MyContainer<std::string> container;
+        container.addElement("apple");  // Last in reverse
+        container.addElement("banana"); // Second to last in reverse
+        container.addElement("cherry"); // Third to last in reverse
+        container.addElement("date");   // First in reverse
+
+        std::vector<std::string> expected_order = {"date", "cherry", "banana", "apple"}; // Expected reverse order
+        std::vector<std::string> actual_order;
+
+        for (auto iter = container.begin_reverse_order(); iter != container.end_reverse_order(); ++iter) {
+            actual_order.push_back(*iter);
+        }
+
+        CHECK(actual_order.size() == expected_order.size());
+        if (actual_order.size() == expected_order.size()) {
+            for (size_t i = 0; i < actual_order.size(); ++i) {
+                CHECK(actual_order[i] == expected_order[i]);
+            }
+        }
+    }
+
+    SUBCASE("ReverseOrderIterator dereference out of bounds throws") {
+        MyContainer<double> container;
+        container.addElement(1.1); // Index 0
+
+        MyContainer<double>::ReverseOrderIterator it = container.begin_reverse_order(); // Points to 1.1 (index 0)
+        ++it; // Move past the first element (becomes end_reverse_order() state)
+        CHECK_THROWS_AS(*it, std::out_of_range); // Attempt to dereference past-the-end
+
+        // Also check if dereferencing end_reverse_order() throws
+        MyContainer<double>::ReverseOrderIterator it_end = container.end_reverse_order();
+        CHECK_THROWS_AS(*it_end, std::out_of_range);
+    }
+
+    SUBCASE("ReverseOrderIterator post-increment behavior") {
+        MyContainer<char> container;
+        container.addElement('a'); // Index 0
+        container.addElement('b'); // Index 1
+        container.addElement('c'); // Index 2 (First in reverse order)
+
+        MyContainer<char>::ReverseOrderIterator it = container.begin_reverse_order(); // Points to 'c'
+
+        // Use copy constructor: creates a new iterator 'prev_it' that is a copy of 'it' BEFORE 'it' is incremented.
+        MyContainer<char>::ReverseOrderIterator prev_it = it++; 
+        CHECK(*prev_it == 'c'); // prev_it should point to 'c' (the value before increment)
+        CHECK(*it == 'b');      // 'it' should point to 'b' (the value after increment)
+
+        // To test the next step, creates a *new* iterator to capture the state before the next increment.
+        MyContainer<char>::ReverseOrderIterator another_prev_it = it++; // 'it' is 'b', 'another_prev_it' gets 'b', 'it' advances to 'a'
+        CHECK(*another_prev_it == 'b'); // 'another_prev_it' should point to 'b'
+        CHECK(*it == 'a');              // 'it' should now point to 'a'
+
+        // 'it' advances to the end.
+        MyContainer<char>::ReverseOrderIterator last_prev_it = it++; // 'it' is 'a', 'last_prev_it' gets 'a', 'it' advances to end
+        CHECK(*last_prev_it == 'a');
+        CHECK(it == container.end_reverse_order()); // 'it' should now be at the end position
+        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing an iterator at or past end() should throw
+    }
+
+    SUBCASE("ReverseOrderIterator multiple dereferences") {
+        MyContainer<int> container;
+        container.addElement(5); // Index 0 (First in reverse order)
+        
+        MyContainer<int>::ReverseOrderIterator it = container.begin_reverse_order(); // Points to 5
+        CHECK(*it == 5);
+        CHECK(*it == 5); // Dereference multiple times
+        CHECK(*it == 5);
+        ++it;
+        CHECK(it == container.end_reverse_order()); // Check if it advanced correctly
+    }
+
+    SUBCASE("ReverseOrderIterator comparison with different container instances") {
+        MyContainer<int> container1;
+        container1.addElement(10); // Index 0
+        container1.addElement(20); // Index 1 (First in reverse order)
+
+        MyContainer<int> container2;
+        container2.addElement(10);
+        container2.addElement(20);
+
+        // Iterators from different container instances should be considered unequal,
+        // even if they point to logically equivalent elements and indices.
+        // This is because they refer to different MyContainer objects.
+        MyContainer<int>::ReverseOrderIterator it1_begin = container1.begin_reverse_order();
+        MyContainer<int>::ReverseOrderIterator it2_begin = container2.begin_reverse_order();
+
+        CHECK(it1_begin != it2_begin); // Different container instances, so iterators are unequal
+
+        // Advance both iterators
+        ++it1_begin;
+        ++it2_begin;
+        CHECK(it1_begin != it2_begin); // Still unequal as they refer to different containers
+
+        // Iterators reaching their respective ends should also be unequal if from different containers
+        MyContainer<int>::ReverseOrderIterator it1_end = container1.end_reverse_order();
+        MyContainer<int>::ReverseOrderIterator it2_end = container2.end_reverse_order();
+        CHECK(it1_end != it2_end); // End iterators from different containers are also unequal
+    }
+
+    SUBCASE("ReverseOrderIterator behavior after container modification (live iterator verification)") {
+        MyContainer<int> container;
+        container.addElement(10); // Index 0
+        container.addElement(20); // Index 1
+        container.addElement(30); // Index 2 (Initial begin_reverse_order points here)
+        CHECK(container.size() == 3); // Container: [10, 20, 30]
+
+        MyContainer<int>::ReverseOrderIterator it = container.begin_reverse_order(); // 'it' points to 30 (index 2)
+
+        // Modify the container: remove 20, add 5.
+        // As ReverseOrderIterator is a live iterator (holds a const reference to the container),
+        // it should reflect these changes. The elements vector of the container changes.
+        container.removeElement(20); // Container: [10, 30] (Indices 0, 1)
+        container.addElement(5);     // Container: [10, 30, 5] (Indices 0, 1, 2)
+        CHECK(container.size() == 3);
+
+        // 'it' was originally pointing to index 2 (which held 30).
+        // After modifications, the element at index 2 is now 5.
+        CHECK(*it == 5); // 'it' should now point to 5.
+
+        // Advance 'it' to the next element. It should now point to the element at index 1 of the *modified* container.
+        ++it; // 'it' advances to index 1. In the modified container [10, 30, 5], index 1 holds 30.
+        CHECK(*it == 30);
+
+        // Advance 'it' again. It should now point to the element at index 0 of the *modified* container.
+        ++it; // 'it' advances to index 0. In the modified container [10, 30, 5], index 0 holds 10.
+        CHECK(*it == 10);
+
+        // Advance 'it' to the end.
+        ++it;
+        CHECK(it == container.end_reverse_order()); // 'it' should now be at the end position
+
+        // A newly created iterator should also reflect the current state of the container.
+        MyContainer<int>::ReverseOrderIterator new_iterator = container.begin_reverse_order(); // Points to 5
+        CHECK(*new_iterator == 5);
+        ++new_iterator;
+        CHECK(*new_iterator == 30);
+        ++new_iterator;
+        CHECK(*new_iterator == 10);
+        ++new_iterator;
+        CHECK(new_iterator == container.end_reverse_order());
+    }
+
+    SUBCASE("Multiple ReverseOrderIterators on the same container") {
+        MyContainer<int> container;
+        container.addElement(30); // Index 0 (Last in reverse)
+        container.addElement(10); // Index 1 (Middle in reverse)
+        container.addElement(20); // Index 2 (First in reverse)
+        // Container elements in insertion order: [30, 10, 20]
+        // Reverse order: [20, 10, 30]
+
+        // Both iterators refer to the same underlying MyContainer instance.
+        // They are independent iterators, but will reflect any changes to the container.
+        MyContainer<int>::ReverseOrderIterator it1 = container.begin_reverse_order(); // Points to 20
+        MyContainer<int>::ReverseOrderIterator it2 = container.begin_reverse_order(); // Points to 20
+
+        CHECK(it1 == it2); // Initially, both are at the same position in the same container
+        CHECK(*it1 == 20); // Points to the last element (20)
+        CHECK(*it2 == 20); // Points to the last element (20)
+
+        ++it1; // it1 is now at index 1 (value 10)
+        CHECK(*it1 == 10);
+        CHECK(*it2 == 20); // it2 should remain at the first element
+
+        CHECK(it1 != it2); // They are no longer equal
+
+        ++it2; // it2 is now at index 1 (value 10)
+        CHECK(it1 == it2); // Now they are equal again
+        CHECK(*it1 == 10);
+        CHECK(*it2 == 10);
+
+        // Advance both to the end independently
+        ++it1; // it1 is now at index 0 (value 30)
+        ++it1; // it1 is now at end()
+        CHECK(it1 == container.end_reverse_order());
+
+        ++it2; // it2 is now at index 0 (value 30)
+        ++it2; // it2 is now at end()
+        CHECK(it2 == container.end_reverse_order());
+
+        CHECK(it1 == it2); // Both are at the end position
     }
 }

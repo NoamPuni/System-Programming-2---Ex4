@@ -295,10 +295,78 @@ public:
         return DescendingOrderIterator(*this, true); // true indicates this is an end iterator
     }
 
-    // --- Other iterator types would be implemented similarly ---
-    // For example:
-    // ReverseOrderIterator begin_reverse_order() const;
-    // ReverseOrderIterator end_reverse_order() const;
+    // --- 4. ReverseOrderIterator (Iterates in reverse order of insertion)
+
+    class ReverseOrderIterator { 
+    private:
+        // the iterator holds a valid reference to the parent container,
+        // which remains valid even if the underlying 'elements' vector reallocates.
+        const MyContainer<T>& cont;
+        size_t current_index;
+
+    public:
+        // Constructor for ReverseOrderIterator.
+        // Initializes the iterator with a reference to the container and a starting index.
+        ReverseOrderIterator(const MyContainer<T>& c, size_t index) 
+            : cont(c), current_index(index) {}
+        
+        // Dereference operator (*it).
+        // Provides access to the element currently pointed to by the iterator.
+        const T& operator*() const {
+            // Access elements through the container's getElements() method,
+            // ensuring access to the current, valid underlying vector.
+            if (current_index >= cont.size()) {
+                throw std::out_of_range("ReverseOrderIterator: Dereference out of bounds."); 
+            }
+            return cont.getElements()[current_index];
+        }
+
+        // Pre-increment operator (++it).
+        // Advances the iterator to the next element in the container.
+        ReverseOrderIterator& operator++() { 
+            // No bounds check here for increment, as standard iterators can be incremented to 'end'.
+            // Dereference operator handles out-of-bounds access.
+            current_index--; // Changed operation from ++ to --
+            return *this;
+        }
+        // Post-increment operator (it++).
+        // Advances the iterator to the next element, but returns a copy of the iterator's state before the increment.
+        ReverseOrderIterator operator++(int) {
+            ReverseOrderIterator temp = *this;
+            ++(*this);
+            return temp;
+        }
+
+        // Equality operator (it1 == it2).
+        // Compares two ReverseOrderIterator objects for equality.
+        bool operator==(const ReverseOrderIterator& other) const { 
+            // Equality check now compares the container references, ensuring both iterators
+            // belong to the same logical container instance.
+            return current_index == other.current_index && &cont == &other.cont;
+        }
+        // Inequality operator (it1 != it2).
+        // Compares two ReverseOrderIterator objects for inequality.
+        bool operator!=(const ReverseOrderIterator& other) const { 
+            return !(*this == other);
+        }
+    };
+
+    // Begin and end methods for ReverseOrderIterator.
+    ReverseOrderIterator begin_reverse_order() const { 
+        // For reverse iteration, begin is the last element.
+        if (elements.empty()) {
+            return ReverseOrderIterator(*this, static_cast<size_t>(-1));// Return an end iterator
+        }
+        return ReverseOrderIterator(*this, elements.size() - 1);
+    }
+    
+    // The iterator will start from the last element and move backwards.
+    // The iterator will stop exactly when it has moved past the first element.
+    // For reverse iteration, end is conceptually "before" the first element (index [-1]).
+    // Using static_cast<size_t>(-1) is to handle the end of a reverse iteration
+    ReverseOrderIterator end_reverse_order() const {
+        return ReverseOrderIterator(*this, static_cast<size_t>(-1));
+    }
 
     // Global operator<< for MyContainer for easy printing.
     friend std::ostream& operator<<(std::ostream& os, const MyContainer<T>& container) {

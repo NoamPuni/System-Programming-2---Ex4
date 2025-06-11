@@ -14,7 +14,7 @@ The project consists of three main files:
 
 * **`MyContainer.hpp`**: A header file containing the definition of the `MyContainer` class and all its nested iterator classes.
 * **`Test.cpp`**: A file containing unit tests for the `MyContainer` class and all its iterators, utilizing the `doctest` framework.
-* **`main.cpp` (or `Demo.cpp`)**: A simple demonstration file that showcases the usage of the container and its various iterators by printing output to the console.
+* **`main.cpp`**: A simple demonstration file that showcases the usage of the container and its various iterators by printing output to the console.
 
 ### `MyContainer.hpp` - The Container Class and Its Iterators
 

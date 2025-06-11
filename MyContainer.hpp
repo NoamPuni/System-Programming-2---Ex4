@@ -4,7 +4,6 @@
 #include <algorithm> // For std::sort, std::remove
 #include <stdexcept> // For std::out_of_range, std::runtime_error
 #include <string>    // Included for string tests if needed
-#include <memory>    // For std::shared_ptr
 
 template <typename T>
 class MyContainer {
@@ -360,12 +359,144 @@ public:
         return ReverseOrderIterator(*this, elements.size() - 1);
     }
     
-    // The iterator will start from the last element and move backwards.
-    // The iterator will stop exactly when it has moved past the first element.
-    // For reverse iteration, end is conceptually "before" the first element (index [-1]).
-    // Using static_cast<size_t>(-1) is to handle the end of a reverse iteration
     ReverseOrderIterator end_reverse_order() const {
+        // The iterator will start from the last element and move backwards.
+        // The iterator will stop exactly when it has moved past the first element.
+        // For reverse iteration, end is conceptually "before" the first element (index [-1]).
+        // Using static_cast<size_t>(-1) is to handle the end of a reverse iteration
         return ReverseOrderIterator(*this, static_cast<size_t>(-1));
+    }
+
+     // --- 5. SideCrossOrderIterator (Iterates in side-cross order: smallest, largest, second-smallest, second-largest, etc.)
+    class SideCrossOrderIterator {
+    private:
+        // A constant reference to the parent MyContainer instance.
+        // This allows the iterator to access the container's elements via getElements().
+        const MyContainer<T>& cont;
+
+        // A vector to store the indexes of the original elements, sorted according to their values.
+        // This forms the "snapshot" for this specific iterator's traversal logic.
+        std::vector<size_t> sorted_original_indexes;
+
+        // Pointers to the current smallest and largest elements in the sorted_original_indexes list.
+        size_t left_ptr_in_sorted_indexes;  // Points to the current smallest remaining element
+        size_t right_ptr_in_sorted_indexes; // Points to the current largest remaining element
+
+        // Flag to determine whether to take the next element from the left (smallest) or right (largest) side.
+        bool is_left_turn;
+
+        // The actual index in the *original* container that the iterator currently points to.
+        // This is what operator* will dereference. For the end iterator, this will be sorted_original_indexes.size().
+        size_t current_returned_original_index;
+        public:
+        // Constructor for SideCrossOrderIterator.
+        // Initializes the iterator by sorting indexes based on the container's elements
+        // and setting up the initial pointers for side-cross traversal.
+        // is_end_iterator_flag: true if this is an end iterator, false for begin.
+        SideCrossOrderIterator(const MyContainer<T>& c, bool is_end_iterator_flag)
+            : cont(c) {
+            // Populate 'sorted_original_indexes' with initial order (0 to size-1)
+            for (size_t i = 0; i < cont.getElements().size(); ++i) {
+                sorted_original_indexes.push_back(i);
+            }
+
+            // Sort 'sorted_original_indexes' based on the values in the container.
+            // This lambda captures the container reference and sorts indexes based on the elements.
+            std::sort(sorted_original_indexes.begin(), sorted_original_indexes.end(),
+                [&](size_t a, size_t b) {
+                    return cont.getElements()[a] < cont.getElements()[b];
+                });
+
+            // Initialize left and right pointers for traversal
+            left_ptr_in_sorted_indexes = 0;
+            right_ptr_in_sorted_indexes = sorted_original_indexes.size() - 1;
+            is_left_turn = true; // Start with the smallest element
+
+            if (is_end_iterator_flag || sorted_original_indexes.empty()) {
+                // For the end iterator, or an empty container, set the current index to past-the-end.
+                current_returned_original_index = sorted_original_indexes.size();
+                // Ensure the bounds are in an "ended" state for consistency.
+                left_ptr_in_sorted_indexes = sorted_original_indexes.size();
+                right_ptr_in_sorted_indexes = sorted_original_indexes.size() -1; // Makes left_ptr > right_ptr
+            } else { // For begin iterator on a non-empty container
+                // Set the initial element to the smallest (first in sorted list)
+                current_returned_original_index = sorted_original_indexes[left_ptr_in_sorted_indexes];
+            }
+        }
+
+        //Dereference operator (*it).
+        //Provides access to the element currently pointed to by the iterator.
+        const T& operator*() const {
+            // Ensure the current index is within valid bounds of the original container.
+            if (current_returned_original_index >= cont.size()) {
+                throw std::out_of_range("SideCrossOrderIterator: Dereference out of bounds.");
+            }
+            // Use the stored original index to access the actual element from the MyContainer.
+            return cont.getElements()[current_returned_original_index];
+        }
+        //Pre-increment operator (++it).
+        //Advances the iterator to the next element in the side-cross sequence.
+        SideCrossOrderIterator& operator++() {
+            // If already at the end, do nothing.
+            if (current_returned_original_index == sorted_original_indexes.size()) {
+                return *this;
+            }
+
+            // Advance pointers based on current turn
+            if (is_left_turn) {
+                left_ptr_in_sorted_indexes++;
+                is_left_turn = false;
+            } else {
+                right_ptr_in_sorted_indexes--;
+                is_left_turn = true;
+            }
+
+            // Update current_returned_original_index based on the new pointer positions
+            if (left_ptr_in_sorted_indexes <= right_ptr_in_sorted_indexes) {
+                if (is_left_turn) { // Next will be from left side
+                    current_returned_original_index = sorted_original_indexes[left_ptr_in_sorted_indexes];
+                } else { // Next will be from right side
+                    current_returned_original_index = sorted_original_indexes[right_ptr_in_sorted_indexes];
+                }
+            } else {
+                // All elements have been processed, set to end state
+                current_returned_original_index = sorted_original_indexes.size();
+            }
+            
+            return *this;
+        }
+
+        //Post-increment operator (it++).
+        //Advances the iterator to the next element, but returns a copy of the iterator's state
+        // *before* the increment.
+        SideCrossOrderIterator operator++(int) {
+            SideCrossOrderIterator temp = *this; // Save current state
+            ++(*this); // Increment actual iterator
+            return temp; // Return saved state
+        }
+
+        //Equality operator (it1 == it2).
+        //Compares two SideCrossOrderIterator objects for equality.
+        bool operator==(const SideCrossOrderIterator& other) const {
+            // Iterators are equal if their currently pointed-to original index is the same
+            // AND they refer to the same container instance.
+            return current_returned_original_index == other.current_returned_original_index && &cont == &other.cont;
+        }
+
+        //Inequality operator (it1 != it2).
+        //Compares two SideCrossOrderIterator objects for inequality.
+        bool operator!=(const SideCrossOrderIterator& other) const {
+            return !(*this == other);
+        }
+    };
+
+    // Begin and end methods for SideCrossOrderIterator
+    // Begin and end methods for SideCrossOrderIterator.
+    SideCrossOrderIterator begin_side_cross_order() const {
+        return SideCrossOrderIterator(*this, false); // false indicates this is a begin iterator
+    }
+    SideCrossOrderIterator end_side_cross_order() const {
+        return SideCrossOrderIterator(*this, true); // true indicates this is an end iterator
     }
 
     // Global operator<< for MyContainer for easy printing.

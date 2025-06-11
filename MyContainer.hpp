@@ -103,8 +103,7 @@ public:
 
     // --- 2. AscendingOrderIterator (sorted from smallest to largest); 
     
-    //template <typename T> // The iterator is templated on the same type as MyContainer
-    class AscendingOrderIterator { // Specifies that AscendingOrderIterator is nested within MyContainer
+    class AscendingOrderIterator { 
     private:
         // A constant reference to the parent MyContainer instance.
         // This allows the iterator to access the container's elements via getElements().
@@ -194,14 +193,110 @@ public:
     AscendingOrderIterator begin_ascending_order() const {
         return AscendingOrderIterator(*this, false); // false indicates this is a begin iterator
     }
+    
     AscendingOrderIterator end_ascending_order() const {
         return AscendingOrderIterator(*this, true); // true indicates this is an end iterator
     }
 
+    // --- 3. DescendingOrderIterator (sorted from largest to smallest)
+
+    class DescendingOrderIterator { 
+    private:
+        // A constant reference to the parent MyContainer instance.
+        // This allows the iterator to access the container's elements via getElements().
+        const MyContainer<T>& cont;
+
+        // A vector to store the indexes of the original elements, sorted according to their values.
+        // This forms the "snapshot" for this specific iterator.
+        std::vector<size_t> indexes;
+
+        // The current position within the `indexes` vector during iteration.
+        size_t current_index_in_sorted_indexes;
+
+    public:
+        // Constructor for DescendingOrderIterator.
+        // Initializes the iterator by sorting indexes based on the container's elements in descending order.
+        // This constructor performs a sort operation each time it's called.
+        // is_end_iterator_flag: true if this is an end iterator, false for begin.
+        DescendingOrderIterator(const MyContainer<T>& cont, bool is_end_iterator_flag)
+            : cont(cont) {
+
+            // Populate 'indexes' with initial order (0 to size-1)
+            for (size_t i = 0; i < cont.size(); ++i) {
+                indexes.push_back(i);
+            }
+
+            // Sort 'indexes' based on the values in the container (lambda function).
+            // This lambda captures the container reference and sorts indexes based on the elements.
+            // Sorts in DESCENDING order (a > b)
+            std::sort(indexes.begin(), indexes.end(),
+                [&](size_t a, size_t b) {
+                    // Ensures sorting is stable and handles equal elements correctly if needed
+                    return cont.getElements()[a] > cont.getElements()[b]; 
+                    //same as it was implemented earlier, changed from < to > for descending order
+                });
+
+            if (is_end_iterator_flag) { // For end iterator
+                current_index_in_sorted_indexes = indexes.size();
+            } else { // For begin iterator
+                current_index_in_sorted_indexes = 0;
+            }
+        }
+
+        //Dereference operator (*it).
+        //Provides access to the element currently pointed to by the iterator.
+        const T& operator*() const {
+            // Ensure the current index is within valid bounds of the sorted indexes.
+            if (current_index_in_sorted_indexes >= indexes.size()) {
+                throw std::out_of_range("DescendingOrderIterator: Dereference out of bounds."); // Updated message
+            }
+            // Use the current sorted index to access the actual element from the MyContainer.
+            return cont.getElements()[indexes[current_index_in_sorted_indexes]];
+        }
+
+        //Pre-increment operator (++it).
+        //Advances the iterator to the next element in the sorted sequence.
+        DescendingOrderIterator& operator++() {
+            if (current_index_in_sorted_indexes < indexes.size()) {
+                current_index_in_sorted_indexes++; // Move to the next index in our sorted list
+            } 
+            return *this;
+        }
+
+        //Post-increment operator (it++).
+        //Advances the iterator to the next element, but returns a copy of the iterator's state
+        // *before* the increment.
+        DescendingOrderIterator operator++(int) {
+            DescendingOrderIterator temp = *this; // Save current state
+            ++(*this); // Increment actual iterator
+            return temp; // Return saved state
+        }
+
+        //Equality operator (it1 == it2).
+        //Compares two DescendingOrderIterator objects for equality.
+        bool operator==(const DescendingOrderIterator& other) const {
+            // Iterators are equal if their internal index is the same AND they refer to the same container instance.
+            return current_index_in_sorted_indexes == other.current_index_in_sorted_indexes && &cont == &other.cont;
+        }
+
+        //Inequality operator (it1 != it2).
+        //Compares two DescendingOrderIterator objects for inequality.
+        bool operator!=(const DescendingOrderIterator& other) const {
+            return !(*this == other);
+        }
+    };
+
+    // Begin and end methods for DescendingOrderIterator.
+    DescendingOrderIterator begin_descending_order() const {
+        return DescendingOrderIterator(*this, false); // false indicates this is a begin iterator
+    }
+    
+    DescendingOrderIterator end_descending_order() const {
+        return DescendingOrderIterator(*this, true); // true indicates this is an end iterator
+    }
+
     // --- Other iterator types would be implemented similarly ---
     // For example:
-    // DescendingOrderIterator begin_descending_order() const;
-    // DescendingOrderIterator end_descending_order() const;
     // ReverseOrderIterator begin_reverse_order() const;
     // ReverseOrderIterator end_reverse_order() const;
 

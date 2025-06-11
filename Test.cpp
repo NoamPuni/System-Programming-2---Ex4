@@ -9,7 +9,6 @@
 #include <memory>                          // For std::shared_ptr
 #include "MyContainer.hpp"
 
-// TEST_CASE מגדיר קבוצת בדיקות (Test Case)
 TEST_CASE("MyContainer basic operations") {
 
     SUBCASE("Adding elements and checking size") {
@@ -628,6 +627,301 @@ TEST_CASE("AscendingOrderIterator Comprehensive Tests") {
         ++it2; // it2 is now at 30
         ++it2; // it2 is now at end()
         CHECK(it2 == container.end_ascending_order()); // Check against an end iterator of the same container
+
+        CHECK(it1 == it2); // Both are at their respective end positions
+    }
+}
+
+TEST_CASE("DescendingOrderIterator Comprehensive Tests") {
+
+    // Basic Operations and Expected Order
+    SUBCASE("Iterating through elements in descending order for various types") {
+        MyContainer<int> intContainer;
+        intContainer.addElement(7);
+        intContainer.addElement(1);
+        intContainer.addElement(15);
+        intContainer.addElement(2);
+        intContainer.addElement(6);
+
+        std::vector<int> expected_int_order = {15, 7, 6, 2, 1}; 
+        std::vector<int> actual_int_order;
+
+        for (auto it = intContainer.begin_descending_order(); it != intContainer.end_descending_order(); ++it) { 
+            actual_int_order.push_back(*it);
+        }
+        CHECK(actual_int_order == expected_int_order);
+
+        MyContainer<std::string> stringContainer;
+        stringContainer.addElement("cherry");
+        stringContainer.addElement("apple");
+        stringContainer.addElement("banana");
+
+        std::vector<std::string> expected_string_order = {"cherry", "banana", "apple"}; 
+        std::vector<std::string> actual_string_order;
+
+        for (auto it = stringContainer.begin_descending_order(); it != stringContainer.end_descending_order(); ++it) { 
+            actual_string_order.push_back(*it);
+        }
+        CHECK(actual_string_order == expected_string_order);
+    }
+
+    SUBCASE("Iterator on a single element container (DescendingOrder)") { 
+        MyContainer<double> container;
+        container.addElement(3.14);
+
+        MyContainer<double>::DescendingOrderIterator it = container.begin_descending_order(); 
+        CHECK(*it == 3.14);
+        
+        ++it; // Advance to end
+        CHECK(it == container.end_descending_order()); 
+        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing end_descending_order() should throw
+    }
+
+    SUBCASE("Basic pre-increment and dereference (DescendingOrder)") { 
+        MyContainer<int> container;
+        container.addElement(30);
+        container.addElement(10);
+        container.addElement(20);
+
+        MyContainer<int>::DescendingOrderIterator it = container.begin_descending_order(); // Should point to 30
+        CHECK(*it == 30); 
+        
+        ++it; // it now points to 20
+        CHECK(*it == 20); // Value remains 20
+
+        ++it; // it now points to 10
+        CHECK(*it == 10); 
+
+        ++it; // it now points to end_descending_order()
+        CHECK(it == container.end_descending_order()); 
+        CHECK_THROWS_AS(*it, std::out_of_range); // Attempt to dereference end_descending_order() 
+    }
+
+    SUBCASE("Basic post-increment behavior (DescendingOrder)") { 
+        MyContainer<char> container;
+        container.addElement('c'); // Original elements order: 'c', 'a'
+        container.addElement('a');
+
+        // DescendingOrderIterator will sort elements: 'c', 'a'
+        MyContainer<char>::DescendingOrderIterator it = container.begin_descending_order(); // 'it' initially points to 'c'
+
+        // Use copy constructor: 'prev_it' is initialized with the current state of 'it'
+        // before 'it' is incremented.
+        MyContainer<char>::DescendingOrderIterator prev_it = it++; // 'prev_it' stores 'c', 'it' advances to 'a'
+
+        CHECK(*prev_it == 'c'); // 'prev_it' should point to 'c'
+        CHECK(*it == 'a');      // 'it' should point to 'a'
+
+        // Create a *new* iterator to capture the state before the next increment.
+        // Copy assignment (e.g., 'prev_it = it++;') is deleted for DescendingOrderIterator.
+        MyContainer<char>::DescendingOrderIterator another_prev_it = it++; // 'another_prev_it' stores 'a', 'it' advances to end
+
+        CHECK(*another_prev_it == 'a'); // 'another_prev_it' should point to 'a'
+        CHECK(it == container.end_descending_order()); // 'it' should now be at end_descending_order()
+        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing an iterator at or past end() should throw
+    }
+
+    // Edge Cases with Empty Container
+    SUBCASE("DescendingOrderIterator on empty container") { 
+        MyContainer<int> container;
+
+        // begin_descending_order() should be equal to end_descending_order() for an empty container
+        MyContainer<int>::DescendingOrderIterator it_begin = container.begin_descending_order();
+        MyContainer<int>::DescendingOrderIterator it_end = container.end_descending_order();
+        CHECK(it_begin == it_end);
+        CHECK_FALSE(it_begin != it_end);
+
+        // Dereferencing begin_descending_order() on an empty container should throw    
+        CHECK_THROWS_AS(*it_begin, std::out_of_range);
+        // Dereferencing end_descending_order() on an empty container should also throw
+        CHECK_THROWS_AS(*it_end, std::out_of_range);
+
+        // Incrementing an iterator on an empty container should still result in end_descending_order()
+        ++it_begin;
+        CHECK(it_begin == it_end);
+        CHECK_THROWS_AS(*it_begin, std::out_of_range); // Still throws on dereference
+    }
+
+    // Edge Cases with Iteration and Dereference
+    SUBCASE("Dereferencing an iterator pointing to end_descending_order() throws") { 
+        MyContainer<int> container;
+        container.addElement(1);
+        container.addElement(2);
+        
+        MyContainer<int>::DescendingOrderIterator it_end = container.end_descending_order(); 
+        CHECK_THROWS_AS(*it_end, std::out_of_range);
+
+        MyContainer<int>::DescendingOrderIterator it = container.begin_descending_order();
+        ++it;
+        ++it; // Now 'it' is at end_descending_order()
+        CHECK_THROWS_AS(*it, std::out_of_range);
+    }
+
+    SUBCASE("Pre-incrementing an iterator past end_descending_order() does not throw but keeps it at end") { 
+        MyContainer<int> container;
+        container.addElement(100);
+
+        MyContainer<int>::DescendingOrderIterator it = container.begin_descending_order();
+        ++it; // Now 'it' is at end_descending_order()
+
+        CHECK(it == container.end_descending_order());
+        CHECK_THROWS_AS(*it, std::out_of_range); // Still throws on dereference
+
+        ++it; // Incrementing past end_descending_order()
+        CHECK(it == container.end_descending_order()); // Should still be equal to end_descending_order()  
+        CHECK_THROWS_AS(*it, std::out_of_range); // Should still throw on dereference
+    }
+
+    SUBCASE("Post-incrementing an iterator past end_descending_order() does not throw but keeps it at end") { 
+        MyContainer<int> container;
+        container.addElement(100);
+
+        MyContainer<int>::DescendingOrderIterator it = container.begin_descending_order();
+        MyContainer<int>::DescendingOrderIterator old_it = it++;
+
+        CHECK(*old_it == 100);
+        CHECK(it == container.end_descending_order()); 
+        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing the advanced 'it' throws
+
+        MyContainer<int>::DescendingOrderIterator old_it_2 = it++; // old_it_2 is end, it is still end
+        CHECK(old_it_2 == container.end_descending_order()); 
+        CHECK(it == container.end_descending_order()); 
+        CHECK_THROWS_AS(*old_it_2, std::out_of_range); // Dereferencing old_it_2 throws
+        CHECK_THROWS_AS(*it, std::out_of_range);       // Dereferencing it throws
+    }
+
+    // Iterator Comparison Logic
+    SUBCASE("DescendingOrderIterator comparison with different container instances") { 
+        MyContainer<int> container1;
+        container1.addElement(30);
+        container1.addElement(10);
+        container1.addElement(20); // Sorted order for container1: [30, 20, 10] 
+
+        MyContainer<int> container2;
+        container2.addElement(10);
+        container2.addElement(30);
+        container2.addElement(20); // Sorted order for container2: [30, 20, 10] 
+
+        // Iterators from different container instances should be considered unequal,
+        // even if they point to logically equivalent elements and indices in their respective snapshots.
+        // This is because they refer to different MyContainer objects.
+        MyContainer<int>::DescendingOrderIterator it1_begin = container1.begin_descending_order();
+        MyContainer<int>::DescendingOrderIterator it2_begin = container2.begin_descending_order();
+
+        CHECK(it1_begin != it2_begin); // Different container instances, so iterators are unequal
+
+        // Advance both iterators
+        ++it1_begin;
+        ++it2_begin;
+        CHECK(it1_begin != it2_begin); // Still unequal as they refer to different containers
+
+        // Iterators reaching their respective ends should also be unequal if from different containers
+        MyContainer<int>::DescendingOrderIterator it1_end = container1.end_descending_order();
+        MyContainer<int>::DescendingOrderIterator it2_end = container2.end_descending_order();
+        CHECK(it1_end != it2_end); // End iterators from different containers are also unequal
+    }
+
+    SUBCASE("Iterator comparison within the same container at different positions (DescendingOrder)") { 
+        MyContainer<int> container;
+        container.addElement(1);
+        container.addElement(2);
+        container.addElement(3);
+
+        MyContainer<int>::DescendingOrderIterator it1 = container.begin_descending_order();  // points to 3
+        MyContainer<int>::DescendingOrderIterator it2 = container.begin_descending_order();  // points to 3
+        MyContainer<int>::DescendingOrderIterator it3 = container.begin_descending_order();  // points to 3
+        ++it3; // points to 2
+
+        CHECK(it1 == it2); // Same position, same container -> equal
+        CHECK_FALSE(it1 != it2);
+
+        CHECK(it1 != it3); // Different positions, same container -> unequal
+        CHECK_FALSE(it1 == it3);
+
+        CHECK(it2 != it3);
+        CHECK_FALSE(it2 == it3);
+    }
+
+    // Iterator Behavior with Container modifications 
+    SUBCASE("DescendingOrderIterator behavior after container modification (index snapshot)") { 
+        MyContainer<int> container;
+        container.addElement(10);
+        container.addElement(30);
+        container.addElement(20);
+        CHECK(container.size() == 3); // Original elements: [10, 30, 20]
+
+        // Iterator captures initial state: sorted values [30, 20, 10]
+        MyContainer<int>::DescendingOrderIterator it_des_initial = container.begin_descending_order();
+
+        // Verify initial iterator
+        CHECK(*it_des_initial == 30);
+        ++it_des_initial;
+        CHECK(*it_des_initial == 20); // Value remains 20
+        ++it_des_initial;
+        CHECK(*it_des_initial == 10); 
+        ++it_des_initial;
+        CHECK(it_des_initial == container.end_descending_order()); 
+
+
+        // --- Modify the container ---
+        // New container elements: [10, 30, 5] (after removal and addition)
+        container.removeElement(20); 
+        container.addElement(5);     
+        CHECK(container.size() == 3); 
+
+        // New iterator created after modification, captures the *current* state.
+        // Current container sorted: [30, 10, 5] 
+        MyContainer<int>::DescendingOrderIterator it_des_after_mod = container.begin_descending_order(); 
+
+        // Verify new iterator reflects the modified container's sorted order.
+        CHECK(*it_des_after_mod == 30);
+        ++it_des_after_mod;
+        CHECK(*it_des_after_mod == 10);
+        ++it_des_after_mod;
+        CHECK(*it_des_after_mod == 5);
+        ++it_des_after_mod;
+        CHECK(it_des_after_mod == container.end_descending_order());
+    }
+
+    SUBCASE("Multiple DescendingOrderIterators on the same container (independent snapshots)") { 
+        MyContainer<int> container;
+        container.addElement(30);
+        container.addElement(10);
+        container.addElement(20);
+        // Container elements initially: [30, 10, 20]
+
+        // DescendingOrderIterator creates an independent snapshot of sorted indices 
+        // at the time of its construction.
+        // Sorted order based on initial elements: [30, 20, 10] 
+        MyContainer<int>::DescendingOrderIterator it1 = container.begin_descending_order(); 
+        MyContainer<int>::DescendingOrderIterator it2 = container.begin_descending_order(); 
+
+        // Although they are independent objects, if created at the same logical position
+        // from the same container, their equality operator might return true based on index and container reference.
+        CHECK(it1 == it2); // Initially, both are at the same logical position (start)
+
+        CHECK(*it1 == 30); // Both point to the first element in their respective sorted snapshots // Changed expected value
+        CHECK(*it2 == 30); // Changed expected value
+
+        ++it1; // it1 advances to the next element in its snapshot (20)
+        CHECK(*it1 == 20); // Value remains 20
+        CHECK(*it2 == 30); // it2 should remain at 30 // Changed expected value (original was 10, this is now correct for descending)
+
+        CHECK(it1 != it2); // They are no longer at the same logical position
+
+        ++it2; // it2 advances to the next element in its snapshot (20)
+        CHECK(it1 == it2); // Now they are at the same logical position again
+        CHECK(*it1 == 20); // Value remains 20
+        CHECK(*it2 == 20); // Value remains 20
+
+        // Advance both to the end independently
+        ++it1; // it1 is now at 10
+        ++it1; // it1 is now at end()
+        CHECK(it1 == container.end_descending_order()); // Check against an end iterator of the same container 
+
+        ++it2; // it2 is now at 10
+        ++it2; // it2 is now at end()
+        CHECK(it2 == container.end_descending_order()); // Check against an end iterator of the same container 
 
         CHECK(it1 == it2); // Both are at their respective end positions
     }

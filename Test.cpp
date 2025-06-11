@@ -236,7 +236,7 @@ TEST_CASE("OrderIterator operations") {
         container2.addElement(20);
 
         // Iterators from different container instances should be considered unequal,
-        // even if they point to logically equivalent elements and indices.
+        // even if they point to logically equivalent elements and indexes.
         // This is because they refer to different MyContainer objects.
         MyContainer<int>::OrderIterator it1_begin = container1.begin_order();
         MyContainer<int>::OrderIterator it2_begin = container2.begin_order();
@@ -507,7 +507,7 @@ TEST_CASE("AscendingOrderIterator operations") {
         container2.addElement(20); // Sorted order for container2: [10, 20, 30]
 
         // Iterators from different container instances should be considered unequal,
-        // even if they point to logically equivalent elements and indices in their respective snapshots.
+        // even if they point to logically equivalent elements and indexes in their respective snapshots.
         // This is because they refer to different MyContainer objects.
         MyContainer<int>::AscendingOrderIterator it1_begin = container1.begin_ascending_order();
         MyContainer<int>::AscendingOrderIterator it2_begin = container2.begin_ascending_order();
@@ -594,7 +594,7 @@ TEST_CASE("AscendingOrderIterator operations") {
         container.addElement(20);
         // Container elements initially: [30, 10, 20]
 
-        // AscendingOrderIterator creates an independent snapshot of sorted indices
+        // AscendingOrderIterator creates an independent snapshot of sorted indexes
         // at the time of its construction.
         // Sorted order based on initial elements: [10, 20, 30]
         MyContainer<int>::AscendingOrderIterator it1 = container.begin_ascending_order(); 
@@ -802,7 +802,7 @@ TEST_CASE("DescendingOrderIterator operations") {
         container2.addElement(20); // Sorted order for container2: [30, 20, 10] 
 
         // Iterators from different container instances should be considered unequal,
-        // even if they point to logically equivalent elements and indices in their respective snapshots.
+        // even if they point to logically equivalent elements and indexes in their respective snapshots.
         // This is because they refer to different MyContainer objects.
         MyContainer<int>::DescendingOrderIterator it1_begin = container1.begin_descending_order();
         MyContainer<int>::DescendingOrderIterator it2_begin = container2.begin_descending_order();
@@ -889,7 +889,7 @@ TEST_CASE("DescendingOrderIterator operations") {
         container.addElement(20);
         // Container elements initially: [30, 10, 20]
 
-        // DescendingOrderIterator creates an independent snapshot of sorted indices 
+        // DescendingOrderIterator creates an independent snapshot of sorted indexes 
         // at the time of its construction.
         // Sorted order based on initial elements: [30, 20, 10] 
         MyContainer<int>::DescendingOrderIterator it1 = container.begin_descending_order(); 
@@ -1044,7 +1044,7 @@ TEST_CASE("ReverseOrderIterator operations") {
         container2.addElement(20);
 
         // Iterators from different container instances should be considered unequal,
-        // even if they point to logically equivalent elements and indices.
+        // even if they point to logically equivalent elements and indexes.
         // This is because they refer to different MyContainer objects.
         MyContainer<int>::ReverseOrderIterator it1_begin = container1.begin_reverse_order();
         MyContainer<int>::ReverseOrderIterator it2_begin = container2.begin_reverse_order();
@@ -1074,8 +1074,8 @@ TEST_CASE("ReverseOrderIterator operations") {
         // Modify the container: remove 20, add 5.
         // As ReverseOrderIterator is a live iterator (holds a const reference to the container),
         // it should reflect these changes. The elements vector of the container changes.
-        container.removeElement(20); // Container: [10, 30] (Indices 0, 1)
-        container.addElement(5);     // Container: [10, 30, 5] (Indices 0, 1, 2)
+        container.removeElement(20); // Container: [10, 30] (indexes 0, 1)
+        container.addElement(5);     // Container: [10, 30, 5] (indexes 0, 1, 2)
         CHECK(container.size() == 3);
 
         // 'it' was originally pointing to index 2 (which held 30).
@@ -1381,7 +1381,7 @@ TEST_CASE("SideCrossOrderIterator operations") {
         container.addElement(20);
         CHECK(container.size() == 3); // Original elements: [10, 30, 20]
 
-        // Iterator captures initial state's sorted indices.
+        // Iterator captures initial state's sorted indexes.
         // Based on original elements: [10, 20, 30] -> SideCross: 10, 30, 20
         MyContainer<int>::SideCrossOrderIterator it_side_cross_initial = container.begin_side_cross_order(); 
 
@@ -1416,14 +1416,14 @@ TEST_CASE("SideCrossOrderIterator operations") {
         CHECK(it_side_cross_after_mod == container.end_side_cross_order());
     }
 
-    SUBCASE("Multiple SideCrossOrderIterators on the same container (independent snapshot of indices)") {
+    SUBCASE("Multiple SideCrossOrderIterators on the same container (independent snapshot of indexes)") {
         MyContainer<int> container;
         container.addElement(30);
         container.addElement(10);
         container.addElement(20);
         // Container elements initially: [30, 10, 20]
 
-        // SideCrossOrderIterator creates an independent snapshot of sorted indices
+        // SideCrossOrderIterator creates an independent snapshot of sorted indexes
         // at the time of its construction.
         // Sorted order based on initial elements: [10, 20, 30] -> SideCross: 10, 30, 20
         MyContainer<int>::SideCrossOrderIterator it1 = container.begin_side_cross_order(); 
@@ -1455,6 +1455,322 @@ TEST_CASE("SideCrossOrderIterator operations") {
         ++it2; // it2 is now at 20
         ++it2; // it2 is now at end()
         CHECK(it2 == container.end_side_cross_order()); // Check against an end iterator of the same container
+
+        CHECK(it1 == it2); // Both are at their respective end positions
+    }
+}
+
+TEST_CASE("MiddleOutOrderIterator operations") {
+
+    // Basic Operations and Expected Order
+    SUBCASE("Iterating through elements in middle-out order for various types") {
+        MyContainer<int> intContainer;
+        intContainer.addElement(7);
+        intContainer.addElement(15); // Original index 1
+        intContainer.addElement(6);  // Original index 2 (middle for size 5)
+        intContainer.addElement(1);
+        intContainer.addElement(2);
+
+        // Original: [7, 15, 6, 1, 2]
+        // MiddleOut Order: Middle, Left of Middle, Right of Middle, Next Left, Next Right
+        // Expected: [6, 15, 1, 7, 2] 
+        std::vector<int> expected_int_order = {6, 15, 1, 7, 2};
+        std::vector<int> actual_int_order;
+
+        for (auto it = intContainer.begin_middle_out_order(); it != intContainer.end_middle_out_order(); ++it) {
+            actual_int_order.push_back(*it);
+        }
+        CHECK(actual_int_order == expected_int_order);
+
+        MyContainer<std::string> stringContainer;
+        stringContainer.addElement("cherry"); // Original index 0
+        stringContainer.addElement("apple");  // Original index 1 (middle for size 3)
+        stringContainer.addElement("banana"); // Original index 2
+
+        // Original: ["cherry", "apple", "banana"]
+        // MiddleOut Order: Middle, Left of Middle, Right of Middle
+        // Expected: "apple", "cherry", "banana"
+        std::vector<std::string> expected_string_order = {"apple", "cherry", "banana"};
+        std::vector<std::string> actual_string_order;
+
+        for (auto it = stringContainer.begin_middle_out_order(); it != stringContainer.end_middle_out_order(); ++it) {
+            actual_string_order.push_back(*it);
+        }
+        CHECK(actual_string_order == expected_string_order);
+    }
+
+    SUBCASE("MiddleOutOrderIterator on a single element container") {
+        MyContainer<double> container;
+        container.addElement(3.14);
+
+        MyContainer<double>::MiddleOutOrderIterator it = container.begin_middle_out_order();
+        CHECK(*it == 3.14);
+        
+        ++it; // Advance to end
+        CHECK(it == container.end_middle_out_order()); // Iterator should now be at the end
+        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing end() should throw
+    }
+
+    SUBCASE("Basic pre-increment and dereference for MiddleOutOrderIterator") {
+        MyContainer<int> container;
+        container.addElement(30); // Original index 0
+        container.addElement(10); // Original index 1 (middle for size 3)
+        container.addElement(20); // Original index 2
+
+        // Original: [30, 10, 20]
+        // MiddleOut: 10 (middle), 30 (left), 20 (right)
+        // Expected: 10, 30, 20
+        MyContainer<int>::MiddleOutOrderIterator it = container.begin_middle_out_order(); // Should point to 10
+        CHECK(*it == 10); 
+        
+        ++it; // it now points to 30
+        CHECK(*it == 30);
+
+        ++it; // it now points to 20
+        CHECK(*it == 20);
+
+        ++it; // it now points to end_middle_out_order()
+        CHECK(it == container.end_middle_out_order()); 
+        CHECK_THROWS_AS(*it, std::out_of_range); // Attempt to dereference end()
+    }
+
+    SUBCASE("Basic post-increment behavior for MiddleOutOrderIterator") {
+        MyContainer<char> container;
+        container.addElement('c'); // Original index 0
+        container.addElement('a'); // Original index 1 (middle for size 3)
+        container.addElement('b'); // Original index 2
+
+        // Original: ['c', 'a', 'b']
+        // MiddleOut: 'a' (middle), 'c' (left), 'b' (right)
+        // Expected: 'a', 'c', 'b'
+        MyContainer<char>::MiddleOutOrderIterator it = container.begin_middle_out_order(); // 'it' initially points to 'a'
+
+        MyContainer<char>::MiddleOutOrderIterator prev_it = it++; // 'prev_it' stores 'a', 'it' advances to 'c'
+
+        CHECK(*prev_it == 'a'); // 'prev_it' should point to 'a'
+        CHECK(*it == 'c'); // 'it' should point to 'c'
+
+        MyContainer<char>::MiddleOutOrderIterator another_prev_it = it++; // 'another_prev_it' stores 'c', 'it' advances to 'b'
+        
+        CHECK(*another_prev_it == 'c'); // 'another_prev_it' should point to 'c'
+        CHECK(*it == 'b'); // 'it' should point to 'b'
+
+        MyContainer<char>::MiddleOutOrderIterator last_prev_it = it++; // 'last_prev_it' stores 'b', 'it' advances to end
+        
+        CHECK(*last_prev_it == 'b'); // 'last_prev_it' should point to 'b'
+        CHECK(it == container.end_middle_out_order()); // 'it' should now be at end()
+        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing an iterator at or past end() should throw
+    }
+
+    // Edge Cases with Empty Container
+    SUBCASE("MiddleOutOrderIterator on empty container") {
+        MyContainer<int> container;
+
+        // begin() should be equal to end() for an empty container
+        MyContainer<int>::MiddleOutOrderIterator it_begin = container.begin_middle_out_order();
+        MyContainer<int>::MiddleOutOrderIterator it_end = container.end_middle_out_order();
+        CHECK(it_begin == it_end);
+        CHECK_FALSE(it_begin != it_end);
+
+        // Dereferencing begin() on an empty container should throw
+        CHECK_THROWS_AS(*it_begin, std::out_of_range);
+        // Dereferencing end() on an empty container should also throw
+        CHECK_THROWS_AS(*it_end, std::out_of_range);
+
+        // Incrementing an iterator on an empty container should still result in end()
+        ++it_begin;
+        CHECK(it_begin == it_end);
+        CHECK_THROWS_AS(*it_begin, std::out_of_range); // Still throws on dereference
+    }
+
+    // Edge Cases with Iteration and Dereference
+    SUBCASE("Dereferencing MiddleOutOrderIterator pointing to end() throws") {
+        MyContainer<int> container;
+        container.addElement(1);
+        container.addElement(2);
+        
+        // Original: [1, 2]
+        // MiddleOut: 1 (middle for even size, rounding down), 2 (right)
+        // Expected: 1, 2
+        MyContainer<int>::MiddleOutOrderIterator it_end = container.end_middle_out_order();
+        CHECK_THROWS_AS(*it_end, std::out_of_range);
+
+        MyContainer<int>::MiddleOutOrderIterator it = container.begin_middle_out_order(); // points to 1
+        ++it; // points to 2
+        ++it; // Now 'it' is at end()
+        CHECK_THROWS_AS(*it, std::out_of_range);
+    }
+
+    SUBCASE("Pre-incrementing MiddleOutOrderIterator past end() does not throw but keeps it at end") {
+        MyContainer<int> container;
+        container.addElement(100);
+
+        MyContainer<int>::MiddleOutOrderIterator it = container.begin_middle_out_order();
+        ++it; // Now 'it' is at end()
+
+        CHECK(it == container.end_middle_out_order()); 
+        CHECK_THROWS_AS(*it, std::out_of_range); // Still throws on dereference
+
+        ++it; // Incrementing past end()
+        CHECK(it == container.end_middle_out_order()); // Should still be equal to end()
+        CHECK_THROWS_AS(*it, std::out_of_range); // Should still throw on dereference
+    }
+
+    SUBCASE("Post-incrementing MiddleOutOrderIterator past end() does not throw but keeps it at end") {
+        MyContainer<int> container;
+        container.addElement(100);
+
+        MyContainer<int>::MiddleOutOrderIterator it = container.begin_middle_out_order();
+        MyContainer<int>::MiddleOutOrderIterator old_it = it++; // old_it is begin, it is end
+
+        CHECK(*old_it == 100);
+        CHECK(it == container.end_middle_out_order());
+        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing the advanced 'it' throws
+
+        MyContainer<int>::MiddleOutOrderIterator old_it_2 = it++; // old_it_2 is end, it is still end
+        CHECK(old_it_2 == container.end_middle_out_order());
+        CHECK(it == container.end_middle_out_order());
+        CHECK_THROWS_AS(*old_it_2, std::out_of_range); // Dereferencing old_it_2 throws
+        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing it throws
+    }
+
+    // Iterator Comparison Logic
+    SUBCASE("MiddleOutOrderIterator comparison with different container instances") {
+        MyContainer<int> container1;
+        container1.addElement(30);
+        container1.addElement(10);
+        container1.addElement(20); 
+
+        MyContainer<int> container2;
+        container2.addElement(10);
+        container2.addElement(30);
+        container2.addElement(20); 
+
+        // Iterators from different container instances should be considered unequal,
+        // as they refer to different MyContainer objects.
+        MyContainer<int>::MiddleOutOrderIterator it1_begin = container1.begin_middle_out_order();
+        MyContainer<int>::MiddleOutOrderIterator it2_begin = container2.begin_middle_out_order();
+
+        CHECK(it1_begin != it2_begin); // Different container instances, so iterators are unequal
+
+        // Advance both iterators
+        ++it1_begin;
+        ++it2_begin;
+        CHECK(it1_begin != it2_begin); // Still unequal as they refer to different containers
+
+        // Iterators reaching their respective ends should also be unequal if from different containers
+        MyContainer<int>::MiddleOutOrderIterator it1_end = container1.end_middle_out_order();
+        MyContainer<int>::MiddleOutOrderIterator it2_end = container2.end_middle_out_order();
+        CHECK(it1_end != it2_end); // End iterators from different containers are also unequal
+    }
+
+    SUBCASE("MiddleOutOrderIterator comparison within the same container at different positions") {
+        MyContainer<int> container;
+        container.addElement(1);
+        container.addElement(3);
+        container.addElement(2);
+
+        // Original: [1, 3, 2]
+        // MiddleOut: 3 (middle), 1 (left), 2 (right)
+        // Expected: 3, 1, 2
+        MyContainer<int>::MiddleOutOrderIterator it1 = container.begin_middle_out_order(); // points to 3
+        MyContainer<int>::MiddleOutOrderIterator it2 = container.begin_middle_out_order(); // points to 3
+        MyContainer<int>::MiddleOutOrderIterator it3 = container.begin_middle_out_order();
+        ++it3; // points to 1
+
+        CHECK(it1 == it2); // Same logical position, same container -> equal
+        CHECK_FALSE(it1 != it2);
+
+        CHECK(it1 != it3); // Different logical positions, same container -> unequal
+        CHECK_FALSE(it1 == it3);
+
+        CHECK(it2 != it3);
+        CHECK_FALSE(it2 == it3);
+    }
+
+    // Iterator Behavior with Container modifications 
+    SUBCASE("MiddleOutOrderIterator behavior after container modification (index snapshot)") {
+        MyContainer<int> container;
+        container.addElement(10);
+        container.addElement(30);
+        container.addElement(20);
+        CHECK(container.size() == 3); // Original elements: [10, 30, 20]
+
+        // Iterator captures initial state's middle-out indexes.
+        // Based on original elements: [10 (0), 30 (1), 20 (2)]
+        // MiddleOut: 30 (middle index 1), 10 (left index 0), 20 (right index 2)
+        // Expected: 30, 10, 20
+        MyContainer<int>::MiddleOutOrderIterator it_middle_out_initial = container.begin_middle_out_order(); 
+
+        // Verify initial iterator
+        CHECK(*it_middle_out_initial == 30);
+        ++it_middle_out_initial;
+        CHECK(*it_middle_out_initial == 10);
+        ++it_middle_out_initial;
+        CHECK(*it_middle_out_initial == 20);
+        ++it_middle_out_initial;
+        CHECK(it_middle_out_initial == container.end_middle_out_order());
+
+        // --- Modify the container ---
+        container.removeElement(20); 
+        container.addElement(5);
+        CHECK(container.size() == 3); 
+        // Current container elements: [10, 30, 5] (original indexes: 0:10, 1:30, 2:5)
+
+        // New iterator created after modification, captures the *current* state.
+        // Based on current elements: [10 (0), 30 (1), 5 (2)]
+        // MiddleOut: 30 (middle index 1), 10 (left index 0), 5 (right index 2)
+        // Expected: 30, 10, 5
+        MyContainer<int>::MiddleOutOrderIterator it_middle_out_after_mod = container.begin_middle_out_order(); 
+
+        // Verify new iterator reflects the modified container's middle-out order.
+        CHECK(*it_middle_out_after_mod == 30);
+        ++it_middle_out_after_mod; 
+        CHECK(*it_middle_out_after_mod == 10); 
+        ++it_middle_out_after_mod;
+        CHECK(*it_middle_out_after_mod == 5); 
+        ++it_middle_out_after_mod;
+        CHECK(it_middle_out_after_mod == container.end_middle_out_order());
+    }
+
+    SUBCASE("Multiple MiddleOutOrderIterators on the same container (independent snapshot of indexes)") {
+        MyContainer<int> container;
+        container.addElement(30); // Original index 0
+        container.addElement(10); // Original index 1 (middle for size 3)
+        container.addElement(20); // Original index 2
+        // Container elements initially: [30, 10, 20]
+
+        // MiddleOutOrderIterator creates an independent snapshot of original indexes in middle-out order
+        // MiddleOut order based on initial elements: 10, 30, 20
+        MyContainer<int>::MiddleOutOrderIterator it1 = container.begin_middle_out_order(); 
+        MyContainer<int>::MiddleOutOrderIterator it2 = container.begin_middle_out_order(); 
+
+        // Although they are independent objects (each with their own arranged_original_indexes vector),
+        // if created at the same logical position from the same container, their equality operator might return true.
+        CHECK(it1 == it2); // Initially, both are at the same logical position (start)
+
+        CHECK(*it1 == 10); // Both point to the first element in their respective middle-out sequence
+        CHECK(*it2 == 10); 
+
+        ++it1; // it1 advances to the next element in its middle-out sequence (30)
+        CHECK(*it1 == 30);
+        CHECK(*it2 == 10); // it2 should remain at 10
+
+        CHECK(it1 != it2); // They are no longer at the same logical position
+
+        ++it2; // it2 advances to the next element in its middle-out sequence (30)
+        CHECK(it1 == it2); // Now they are at the same logical position again
+        CHECK(*it1 == 30);
+        CHECK(*it2 == 30);
+
+        // Advance both to the end independently
+        ++it1; // it1 is now at 20
+        ++it1; // it1 is now at end()
+        CHECK(it1 == container.end_middle_out_order()); // Check against an end iterator of the same container
+
+        ++it2; // it2 is now at 20
+        ++it2; // it2 is now at end()
+        CHECK(it2 == container.end_middle_out_order()); // Check against an end iterator of the same container
 
         CHECK(it1 == it2); // Both are at their respective end positions
     }

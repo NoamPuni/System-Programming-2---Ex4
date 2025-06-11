@@ -101,7 +101,6 @@ public:
     }
 
     // --- 2. AscendingOrderIterator (sorted from smallest to largest); 
-    
     class AscendingOrderIterator { 
     private:
         // A constant reference to the parent MyContainer instance.
@@ -198,7 +197,6 @@ public:
     }
 
     // --- 3. DescendingOrderIterator (sorted from largest to smallest)
-
     class DescendingOrderIterator { 
     private:
         // A constant reference to the parent MyContainer instance.
@@ -295,7 +293,6 @@ public:
     }
 
     // --- 4. ReverseOrderIterator (Iterates in reverse order of insertion)
-
     class ReverseOrderIterator { 
     private:
         // the iterator holds a valid reference to the parent container,
@@ -490,15 +487,136 @@ public:
         }
     };
 
-    // Begin and end methods for SideCrossOrderIterator
     // Begin and end methods for SideCrossOrderIterator.
     SideCrossOrderIterator begin_side_cross_order() const {
         return SideCrossOrderIterator(*this, false); // false indicates this is a begin iterator
     }
+
     SideCrossOrderIterator end_side_cross_order() const {
         return SideCrossOrderIterator(*this, true); // true indicates this is an end iterator
     }
 
+    // --- 6. MiddleOutOrderIterator (Iterates from the middle element outwards, alternating left and right) 
+    class MiddleOutOrderIterator {
+    private:
+        // A constant reference to the parent MyContainer instance.
+        // This allows the iterator to access the container's elements via getElements().
+        const MyContainer<T>& cont;
+
+        // A vector to store the indexes of the original elements, arranged in middle-out order.
+        // This forms the "snapshot" of the traversal path for this specific iterator.
+        std::vector<size_t> arranged_original_indexes;
+
+        // The current position within the `arranged_original_indexes` vector during iteration.
+        size_t current_index_in_arranged_indexes;
+    public:
+        // Constructor for MiddleOutOrderIterator.
+        // Initializes the iterator by arranging the original indexes in middle-out order.
+        // This constructor performs the arrangement operation each time it's called.
+        // is_end_iterator_flag: true if this is an end iterator, false for begin.
+        MiddleOutOrderIterator(const MyContainer<T>& c, bool is_end_iterator_flag)
+            : cont(c) {
+            
+            size_t n = cont.getElements().size();
+
+            if (n == 0) {
+                // For an empty container, the arranged_original_indexes remains empty.
+                current_index_in_arranged_indexes = 0; // Or any value that equals arranged_original_indexes.size() (which is 0)
+                return;
+            }
+
+            // Calculate the middle index (or indices for even count).
+            // using floor division for the middle index, which rounds down.
+            // For [odd-sized] (e.g size 5), middle_index_base = (5-1)/2 = index 2.
+            // For [even-sized] (e.g size 4), middle_index_base = (4-1)/2 = index 1.
+            int middle_index_base = (n - 1) / 2;
+
+            // Add the middle element first
+            arranged_original_indexes.push_back(middle_index_base);
+
+            // Pointers for outward expansion
+            int left_offset = 1;  // Distance to the left from middle_index_base
+            int right_offset = 1; // Distance to the right from middle_index_base
+            bool use_left = true; // Flag to alternate between left and right
+
+            // Continue adding elements until all are included
+            while (arranged_original_indexes.size() < n) {
+                if (use_left) {
+                    int left_index = middle_index_base - left_offset;
+                    if (left_index >= 0) { // Check if left index is valid
+                        arranged_original_indexes.push_back(left_index);
+                    }
+                    left_offset++;
+                } else {
+                    int right_index = middle_index_base + right_offset;
+                    if (right_index < n) { // Check if right index is valid
+                        arranged_original_indexes.push_back(right_index);
+                    }
+                    right_offset++;
+                }
+                use_left = !use_left; // Toggle for next iteration
+            }
+
+            // Set current_index_in_arranged_indexes based on whether it's a begin or end iterator
+            if (is_end_iterator_flag) {
+                current_index_in_arranged_indexes = arranged_original_indexes.size();
+            } else {
+                current_index_in_arranged_indexes = 0;
+            }
+        }
+        
+        // Dereference operator (*it).
+        // Provides access to the element currently pointed to by the iterator.
+        const T& operator*() const {
+            // Ensure the current index is within valid bounds of the arranged indexes.
+            if (current_index_in_arranged_indexes >= arranged_original_indexes.size()) {
+                throw std::out_of_range("MiddleOutOrderIterator: Dereference out of bounds.");
+            }
+            // Use the current arranged index to access the actual element from the MyContainer.
+            return cont.getElements()[arranged_original_indexes[current_index_in_arranged_indexes]];
+        }
+
+        // Pre-increment operator (++it).
+        // Advances the iterator to the next element in the middle-out sequence.
+        MiddleOutOrderIterator& operator++() {
+            if (current_index_in_arranged_indexes < arranged_original_indexes.size()) {
+                current_index_in_arranged_indexes++; // Move to the next index in our arranged list
+            } 
+            return *this;
+        }
+
+        // Post-increment operator (it++).
+        // Advances the iterator to the next element, but returns a copy of the iterator's state
+        // *before* the increment.
+        MiddleOutOrderIterator operator++(int) {
+            MiddleOutOrderIterator temp = *this; // Save current state
+            ++(*this); // Increment actual iterator
+            return temp; // Return saved state
+        }
+
+        // Equality operator (it1 == it2).
+        // Compares two MiddleOutOrderIterator objects for equality.
+        bool operator==(const MiddleOutOrderIterator& other) const {
+            // Iterators are equal if their internal index is the same AND they refer to the same container instance.
+            return current_index_in_arranged_indexes == other.current_index_in_arranged_indexes && &cont == &other.cont;
+        }
+
+        // Inequality operator (it1 != it2).
+        // Compares two MiddleOutOrderIterator objects for inequality.
+        bool operator!=(const MiddleOutOrderIterator& other) const {
+            return !(*this == other);
+        }
+    };
+
+    // Begin and end methods for MiddleOutOrderIterator.
+    MiddleOutOrderIterator begin_middle_out_order() const {
+        return MiddleOutOrderIterator(*this, false); // false indicates this is a begin iterator
+    }
+
+    MiddleOutOrderIterator end_middle_out_order() const {
+        return MiddleOutOrderIterator(*this, true); // true indicates this is an end iterator
+    }
+    
     // Global operator<< for MyContainer for easy printing.
     friend std::ostream& operator<<(std::ostream& os, const MyContainer<T>& container) {
         os << "MyContainer elements: [";

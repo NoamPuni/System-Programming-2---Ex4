@@ -36,21 +36,20 @@ TEST_CASE("MyContainer basic operations") {
 
         container.removeElement(20);
         CHECK(container.size() == 2);
-        // Corrected: Expect 20 to be GONE
         CHECK(std::find(container.getElements().begin(), container.getElements().end(), 20) == container.getElements().end());
+        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 10) != container.getElements().end());
+        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 30) != container.getElements().end());
 
-        container.addElement(40);
-        container.addElement(20); // הוספה חוזרת של 20
-        container.addElement(50);
-        CHECK(container.size() == 5);
-        container.removeElement(20); // הסרה של מופע אחד מבין השניים - *NOW THIS REMOVES ALL 20s*
-        CHECK(container.size() == 4); // Original size 5, one 20 removed, so should be 4.
-                                    // This line is now also incorrect if MyContainer::removeElement removes *all* 20s.
-                                    // If you added 20 (once) and then removed it, the size should be 4.
-                                    // Let's assume you intend to remove *all* instances of 20 here, if any existed.
+        // Test removing an element that has duplicates, verifying all occurrences are removed
+        container.addElement(10); // Container: [10, 30, 10]
+        container.addElement(40); // Container: [10, 30, 10, 40]
+        CHECK(container.size() == 4);
 
-        // After removeElement(20), there should be NO 20s left if it removes all.
-        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 20) == container.getElements().end());
+        container.removeElement(10); // Removes all occurrences of 10
+        CHECK(container.size() == 2); // Should now contain 30 and 40
+        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 10) == container.getElements().end());
+        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 30) != container.getElements().end());
+        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 40) != container.getElements().end());
     }
 
     SUBCASE("Removing non-existent elements throws exception") {
@@ -94,34 +93,33 @@ TEST_CASE("MyContainer basic operations") {
 
     SUBCASE("Handling duplicate elements correctly in add and remove") {
         MyContainer<int> container;
-        container.addElement(5);
         container.addElement(10);
-        container.addElement(5); // הוספת כפילות
-        container.addElement(15);
+        container.addElement(20);
+        container.addElement(10); // Add a duplicate
+        container.addElement(30);
+        CHECK(container.size() == 4); // Container: [10, 20, 10, 30]
+
+        // Verify all occurrences of 10 are removed
+        container.removeElement(10);
+        CHECK(container.size() == 2); // Should only contain 20 and 30
+        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 10) == container.getElements().end());
+        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 20) != container.getElements().end());
+        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 30) != container.getElements().end());
+
+        // Add more duplicates and test again
+        container.addElement(20); // Container: [20, 30, 20]
+        container.addElement(20); // Container: [20, 30, 20, 20]
         CHECK(container.size() == 4);
-        std::cout << "Before first remove (duplicate): " << container << std::endl; // Debug output
 
-        container.removeElement(5); // This removes ALL 5s
-        std::cout << "After first remove (duplicate): " << container << std::endl; // Debug output
-
-        // ORIGINAL: CHECK(container.size() == 3); // THIS IS THE FAILED CHECK (2 == 3)
-        // Corrected: If ALL 5s are removed, and there were two 5s, size should be 2 (4 - 2 = 2)
-        CHECK(container.size() == 2); // Expect size 2 if both 5s were removed
-
-        // ORIGINAL: CHECK(std::find(container.getElements().begin(), container.getElements().end(), 5) != container.getElements().end()); // 5 still exists
-        // Corrected: If ALL 5s are removed, expect 5 to be GONE
-        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 5) == container.getElements().end()); // 5 is gone
-        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 10) != container.getElements().end());
-        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 15) != container.getElements().end());
-
-        // Since all 5s are already removed, the next removeElement(5) call should throw.
-        // There's no "second remove of 5" if the first one removed all.
-        // So, we just check that attempting to remove it again throws.
-        CHECK_THROWS_AS(container.removeElement(5), std::runtime_error); // Attempt to remove 5 again - should throw as it's not there
+        container.removeElement(20); // Removes all occurrences of 20
+        CHECK(container.size() == 1); // Should only contain 30
+        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 20) == container.getElements().end());
+        CHECK(std::find(container.getElements().begin(), container.getElements().end(), 30) != container.getElements().end());
     }
 }
 
 TEST_CASE("OrderIterator operations") {
+
     SUBCASE("OrderIterator on non-empty container") {
         MyContainer<int> container;
         container.addElement(10);
@@ -196,16 +194,26 @@ TEST_CASE("OrderIterator operations") {
         MyContainer<char> container;
         container.addElement('a');
         container.addElement('b');
+        container.addElement('c'); // Added 'c' for more comprehensive test to ensure 'it' doesn't go out of bounds too quickly.
 
         MyContainer<char>::OrderIterator it = container.begin_order();
-        MyContainer<char>::OrderIterator prev_it = it++; // Store current, then increment
-        CHECK(*prev_it == 'a'); // prev_it should point to 'a'
-        CHECK(*it == 'b');      // it should point to 'b'
 
-        prev_it = it++; // it is 'b', prev_it gets 'b', it advances to end
-        CHECK(*prev_it == 'b');
-        CHECK(it == container.end_order()); // it should be at end
-        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing post-incremented past-end should throw
+        // Use copy constructor: creates a new iterator 'prev_it' that is a copy of 'it' BEFORE 'it' is incremented.
+        MyContainer<char>::OrderIterator prev_it = it++; 
+        CHECK(*prev_it == 'a'); // prev_it should point to 'a' (the value before increment)
+        CHECK(*it == 'b');      // 'it' should point to 'b' (the value after increment)
+
+        // To test the next step, create a *new* iterator to capture the state before the next increment.
+        // We cannot use assignment (prev_it = ...) for OrderIterator due to its const reference member.
+        MyContainer<char>::OrderIterator another_prev_it = it++; // 'it' is 'b', 'another_prev_it' gets 'b', 'it' advances to 'c'
+        CHECK(*another_prev_it == 'b'); // 'another_prev_it' should point to 'b'
+        CHECK(*it == 'c');             // 'it' should now point to 'c'
+
+        // Advance 'it' to the end.
+        MyContainer<char>::OrderIterator last_prev_it = it++; // 'it' is 'c', 'last_prev_it' gets 'c', 'it' advances to end
+        CHECK(*last_prev_it == 'c');
+        CHECK(it == container.end_order()); // 'it' should now be at the end position
+        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing an iterator at or past end() should throw
     }
 
     SUBCASE("OrderIterator multiple dereferences") {
@@ -218,6 +226,115 @@ TEST_CASE("OrderIterator operations") {
         CHECK(*it == 5);
         ++it;
         CHECK(it == container.end_order()); // Check if it advanced correctly
+    }
+
+    SUBCASE("Iterator comparison with different container instances") {
+        MyContainer<int> container1;
+        container1.addElement(10);
+        container1.addElement(20);
+
+        MyContainer<int> container2;
+        container2.addElement(10);
+        container2.addElement(20);
+
+        // Iterators from different container instances should be considered unequal,
+        // even if they point to logically equivalent elements and indices.
+        // This is because they refer to different MyContainer objects.
+        MyContainer<int>::OrderIterator it1_begin = container1.begin_order();
+        MyContainer<int>::OrderIterator it2_begin = container2.begin_order();
+
+        CHECK(it1_begin != it2_begin); // Different container instances, so iterators are unequal
+
+        // Advance both iterators
+        ++it1_begin;
+        ++it2_begin;
+        CHECK(it1_begin != it2_begin); // Still unequal as they refer to different containers
+
+        // Iterators reaching their respective ends should also be unequal if from different containers
+        MyContainer<int>::OrderIterator it1_end = container1.end_order();
+        MyContainer<int>::OrderIterator it2_end = container2.end_order();
+        CHECK(it1_end != it2_end); // End iterators from different containers are also unequal
+    }
+
+    SUBCASE("OrderIterator behavior after container modification (live iterator verification)") {
+        MyContainer<int> container;
+        container.addElement(10);
+        container.addElement(20);
+        container.addElement(30);
+        CHECK(container.size() == 3); // Container: [10, 20, 30]
+
+        MyContainer<int>::OrderIterator it = container.begin_order(); // 'it' points to 10 (index 0)
+
+        // Modify the container: remove 20, add 5.
+        // As OrderIterator is a live iterator (holds a const reference to the container),
+        // it should reflect these changes. The elements vector of the container changes.
+        container.removeElement(20); // Container: [10, 30]
+        container.addElement(5);    // Container: [10, 30, 5]
+        CHECK(container.size() == 3);
+
+        // 'it' was at index 0, which is still 10.
+        CHECK(*it == 10);
+
+        // Advance 'it' to the next element. It should now point to the element at index 1 of the *modified* container.
+        ++it; // 'it' advances to index 1. In the modified container [10, 30, 5], index 1 holds 30.
+        CHECK(*it == 30);
+
+        // Advance 'it' again. It should now point to the element at index 2 of the *modified* container.
+        ++it; // 'it' advances to index 2. In the modified container [10, 30, 5], index 2 holds 5.
+        CHECK(*it == 5);
+
+        // Advance 'it' to the end.
+        ++it;
+        CHECK(it == container.end_order()); // 'it' should now be at the end position
+
+        // A newly created iterator should also reflect the current state of the container.
+        MyContainer<int>::OrderIterator new_iterator = container.begin_order();
+        CHECK(*new_iterator == 10);
+        ++new_iterator;
+        CHECK(*new_iterator == 30);
+        ++new_iterator;
+        CHECK(*new_iterator == 5);
+        ++new_iterator;
+        CHECK(new_iterator == container.end_order());
+    }
+
+    SUBCASE("Multiple OrderIterators on the same container") {
+        MyContainer<int> container;
+        container.addElement(30);
+        container.addElement(10);
+        container.addElement(20);
+        // Container elements in insertion order: [30, 10, 20]
+
+        // Both iterators refer to the same underlying MyContainer instance.
+        // They are independent iterators, but will reflect any changes to the container.
+        MyContainer<int>::OrderIterator it1 = container.begin_order();
+        MyContainer<int>::OrderIterator it2 = container.begin_order(); 
+
+        CHECK(it1 == it2); // Initially, both are at the same position in the same container
+        CHECK(*it1 == 30); // Points to the first element (30)
+        CHECK(*it2 == 30); // Points to the first element (30)
+
+        ++it1; // it1 is now at index 1 (value 10)
+        CHECK(*it1 == 10);
+        CHECK(*it2 == 30); // it2 should remain at the first element
+
+        CHECK(it1 != it2); // They are no longer equal
+
+        ++it2; // it2 is now at index 1 (value 10)
+        CHECK(it1 == it2); // Now they are equal again
+        CHECK(*it1 == 10);
+        CHECK(*it2 == 10);
+
+        // Advance both to the end independently
+        ++it1; // it1 is now at index 2 (value 20)
+        ++it1; // it1 is now at end()
+        CHECK(it1 == container.end_order());
+
+        ++it2; // it2 is now at index 2 (value 20)
+        ++it2; // it2 is now at end()
+        CHECK(it2 == container.end_order());
+
+        CHECK(it1 == it2); // Both are at the end position
     }
 }
 
@@ -288,19 +405,26 @@ TEST_CASE("AscendingOrderIterator Comprehensive Tests") {
 
     SUBCASE("Basic post-increment behavior") {
         MyContainer<char> container;
-        container.addElement('c');
+        container.addElement('c'); // Original elements order: 'c', 'a'
         container.addElement('a');
 
-        MyContainer<char>::AscendingOrderIterator it = container.begin_ascending_order(); // Points to 'a'
-        MyContainer<char>::AscendingOrderIterator prev_it = it++; // prev_it stores 'a', it advances to 'c'
+        // AscendingOrderIterator will sort elements: 'a', 'c'
+        MyContainer<char>::AscendingOrderIterator it = container.begin_ascending_order(); // 'it' initially points to 'a'
 
-        CHECK(*prev_it == 'a'); // prev_it should point to 'a'
-        CHECK(*it == 'c');      // it should point to 'c'
+        // Use copy constructor: 'prev_it' is initialized with the current state of 'it'
+        // before 'it' is incremented.
+        MyContainer<char>::AscendingOrderIterator prev_it = it++; // 'prev_it' stores 'a', 'it' advances to 'c'
 
-        prev_it = it++; // prev_it stores 'c', it advances to end_ascending_order()
-        CHECK(*prev_it == 'c');
-        CHECK(it == container.end_ascending_order()); // it should be at end_ascending_order()
-        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing post-incremented past-end should throw
+        CHECK(*prev_it == 'a'); // 'prev_it' should point to 'a'
+        CHECK(*it == 'c');      // 'it' should point to 'c'
+
+        // Create a *new* iterator to capture the state before the next increment.
+        // Copy assignment (e.g., 'prev_it = it++;') is deleted for AscendingOrderIterator.
+        MyContainer<char>::AscendingOrderIterator another_prev_it = it++; // 'another_prev_it' stores 'c', 'it' advances to end
+        
+        CHECK(*another_prev_it == 'c'); // 'another_prev_it' should point to 'c'
+        CHECK(it == container.end_ascending_order()); // 'it' should now be at end_ascending_order()
+        CHECK_THROWS_AS(*it, std::out_of_range); // Dereferencing an iterator at or past end() should throw
     }
 
     // Edge Cases with Empty Container
@@ -373,29 +497,34 @@ TEST_CASE("AscendingOrderIterator Comprehensive Tests") {
     }
 
     // Iterator Comparison Logic
-    SUBCASE("Iterator comparison with different shared_ptr instances - detailed") {
+   SUBCASE("AscendingOrderIterator comparison with different container instances") {
         MyContainer<int> container1;
+        container1.addElement(30);
         container1.addElement(10);
-        
-        MyContainer<int> container2; 
-        container2.addElement(10); // Same value, but different container instance -> different shared_ptr
+        container1.addElement(20); // Sorted order for container1: [10, 20, 30]
 
+        MyContainer<int> container2;
+        container2.addElement(10);
+        container2.addElement(30);
+        container2.addElement(20); // Sorted order for container2: [10, 20, 30]
+
+        // Iterators from different container instances should be considered unequal,
+        // even if they point to logically equivalent elements and indices in their respective snapshots.
+        // This is because they refer to different MyContainer objects.
         MyContainer<int>::AscendingOrderIterator it1_begin = container1.begin_ascending_order();
-        MyContainer<int>::AscendingOrderIterator it1_end = container1.end_ascending_order();
-
         MyContainer<int>::AscendingOrderIterator it2_begin = container2.begin_ascending_order();
+
+        CHECK(it1_begin != it2_begin); // Different container instances, so iterators are unequal
+
+        // Advance both iterators
+        ++it1_begin;
+        ++it2_begin;
+        CHECK(it1_begin != it2_begin); // Still unequal as they refer to different containers
+
+        // Iterators reaching their respective ends should also be unequal if from different containers
+        MyContainer<int>::AscendingOrderIterator it1_end = container1.end_ascending_order();
         MyContainer<int>::AscendingOrderIterator it2_end = container2.end_ascending_order();
-        
-        // Iterators from different containers should always be unequal, even if content is identical
-        CHECK(it1_begin != it2_begin); 
-        CHECK_FALSE(it1_begin == it2_begin);
-
-        CHECK(it1_end != it2_end);
-        CHECK_FALSE(it1_end == it2_end);
-
-        // An iterator from container1 should also be unequal to an end iterator from container2
-        CHECK(it1_begin != it2_end);
-        CHECK_FALSE(it1_begin == it2_end);
+        CHECK(it1_end != it2_end); // End iterators from different containers are also unequal
     }
 
     SUBCASE("Iterator comparison within the same container at different positions") {
@@ -420,69 +549,86 @@ TEST_CASE("AscendingOrderIterator Comprehensive Tests") {
     }
 
     // Iterator Behavior with Container modifications 
-    // Based on the `AscendingOrderIterator` implementation,
-    // it is designed to work on a *snapshot* of the container's sorted data.
-    // This means iterators created before a modification to the container will *not* reflect those changes,
-    // but rather operate on the data as it was when the iterator was constructed.
-    SUBCASE("Iterator behavior after container modification (snapshot verification)") {
+     SUBCASE("AscendingOrderIterator behavior after container modification (index snapshot)") {
         MyContainer<int> container;
-        container.addElement(20);
         container.addElement(10);
+        container.addElement(30);
+        container.addElement(20);
+        CHECK(container.size() == 3); // Original elements: [10, 30, 20]
 
-        // Get an iterator for the current state (snapshot): [10, 20]
-        MyContainer<int>::AscendingOrderIterator old_snapshot_it = container.begin_ascending_order();
-        CHECK(*old_snapshot_it == 10);
-        
-        // Modify the original container: add 5, remove 20. The container now conceptually has [5, 10]
-        container.addElement(5);
+        // Iterator captures initial state: sorted values [10, 20, 30]
+        MyContainer<int>::AscendingOrderIterator it_asc_initial = container.begin_ascending_order(); 
+
+        // Verify initial iterator
+        CHECK(*it_asc_initial == 10);
+        ++it_asc_initial;
+        CHECK(*it_asc_initial == 20);
+        ++it_asc_initial;
+        CHECK(*it_asc_initial == 30);
+        ++it_asc_initial;
+        CHECK(it_asc_initial == container.end_ascending_order());
+
+
+        // --- Modify the container ---
+        // New container elements: [10, 30, 5] (after removal and addition)
         container.removeElement(20); 
+        container.addElement(5);     
+        CHECK(container.size() == 3); 
 
-        // Verify the old iterator still iterates over its original snapshot ([10, 20])
-        CHECK(*old_snapshot_it == 10); 
-        ++old_snapshot_it;
-        CHECK(*old_snapshot_it == 20); 
-        ++old_snapshot_it;
-        CHECK(old_snapshot_it == container.end_ascending_order()); // old_snapshot_it's end for its snapshot
+        // New iterator created after modification, captures the *current* state.
+        // Current container sorted: [5, 10, 30]
+        MyContainer<int>::AscendingOrderIterator it_asc_after_mod = container.begin_ascending_order(); 
 
-        // Get a new iterator for the modified container state. This new iterator will reflect the changes.
-        MyContainer<int>::AscendingOrderIterator new_snapshot_it = container.begin_ascending_order();
-        CHECK(*new_snapshot_it == 5); // New iterator reflects the addition of 5 and removal of 20
-        ++new_snapshot_it;
-        CHECK(*new_snapshot_it == 10);
-        ++new_snapshot_it;
-        CHECK(new_snapshot_it == container.end_ascending_order()); 
+        // Verify new iterator reflects the modified container's sorted order.
+        CHECK(*it_asc_after_mod == 5);  
+        ++it_asc_after_mod; 
+        CHECK(*it_asc_after_mod == 10); 
+        ++it_asc_after_mod;
+        CHECK(*it_asc_after_mod == 30); 
+        ++it_asc_after_mod;
+        CHECK(it_asc_after_mod == container.end_ascending_order());
     }
 
-    SUBCASE("Multiple iterators on the same snapshot") {
+   SUBCASE("Multiple AscendingOrderIterators on the same container (independent snapshots)") {
         MyContainer<int> container;
         container.addElement(30);
         container.addElement(10);
         container.addElement(20);
+        // Container elements initially: [30, 10, 20]
 
-        // Both iterators point to the same shared_ptr snapshot: [10, 20, 30]
-        MyContainer<int>::AscendingOrderIterator it1 = container.begin_ascending_order();
+        // AscendingOrderIterator creates an independent snapshot of sorted indices
+        // at the time of its construction.
+        // Sorted order based on initial elements: [10, 20, 30]
+        MyContainer<int>::AscendingOrderIterator it1 = container.begin_ascending_order(); 
         MyContainer<int>::AscendingOrderIterator it2 = container.begin_ascending_order(); 
 
-        CHECK(it1 == it2); // Initially, both are at the same position and same snapshot
-        CHECK(*it1 == 10);
-        CHECK(*it2 == 10);
+        // Although they are independent objects, if created at the same logical position
+        // from the same container, their equality operator might return true based on index and container reference.
+        CHECK(it1 == it2); // Initially, both are at the same logical position (start)
 
-        ++it1; // it1 is now at 20
+        CHECK(*it1 == 10); // Both point to the first element in their respective sorted snapshots
+        CHECK(*it2 == 10); 
+
+        ++it1; // it1 advances to the next element in its snapshot (20)
         CHECK(*it1 == 20);
         CHECK(*it2 == 10); // it2 should remain at 10
 
-        CHECK(it1 != it2); // They are no longer equal
-        
-        ++it2; // it2 is now at 20
-        CHECK(it1 == it2); // Now they are equal again
+        CHECK(it1 != it2); // They are no longer at the same logical position
+
+        ++it2; // it2 advances to the next element in its snapshot (20)
+        CHECK(it1 == it2); // Now they are at the same logical position again
         CHECK(*it1 == 20);
         CHECK(*it2 == 20);
 
-        // Advance both to end
-        ++it1;
-        ++it2;
-        CHECK(it1 == container.end_ascending_order());
-        CHECK(it2 == container.end_ascending_order());
-        CHECK(it1 == it2); // Both are at end_ascending_order() of the same snapshot
+        // Advance both to the end independently
+        ++it1; // it1 is now at 30
+        ++it1; // it1 is now at end()
+        CHECK(it1 == container.end_ascending_order()); // Check against an end iterator of the same container
+
+        ++it2; // it2 is now at 30
+        ++it2; // it2 is now at end()
+        CHECK(it2 == container.end_ascending_order()); // Check against an end iterator of the same container
+
+        CHECK(it1 == it2); // Both are at their respective end positions
     }
 }

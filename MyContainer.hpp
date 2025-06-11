@@ -119,38 +119,30 @@ public:
 
     public:
         
-         // Constructor for AscendingOrderIterator.
-         // Initializes the iterator by sorting indexes based on the container's elements.
-         // This constructor performs a sort operation each time it's called.
-        AscendingOrderIterator(const MyContainer<T>& c, bool is_begin_iterator = true)
-            : cont(c), current_index_in_sorted_indexes(0) // Initialize members
-        {
-            // Resize the indexes vector to match the number of elements in the container.
-            indexes.resize(cont.size());
+        // Constructor for AscendingOrderIterator.
+        // Initializes the iterator by sorting indexes based on the container's elements.
+        // This constructor performs a sort operation each time it's called.
+        // is_end_iterator_flag: true if this is an end iterator, false for begin.
+        AscendingOrderIterator(const MyContainer<T>& cont, bool is_end_iterator_flag)
+            : cont(cont) { // current_index_in_sorted_indexes will be set later
 
-            // Populate the indexes vector with sequential indexes (0, 1, 2, ...).
-            for (size_t i = 0; i < cont.size(); ++i) {
-                indexes[i] = i;
+            // Populate 'indexes' with initial order (0 to size-1)
+            for (size_t i = 0; i < cont.getElements().size(); ++i) {
+                indexes.push_back(i);
             }
 
-            // --- Sorting the indexes using a lambda function ---
-            // std::sort takes a range and an optional comparison function.
-            // The lambda `[&](size_t i, size_t j)` defines this comparison logic.
-            // `[&]` captures all external variables by reference (here, `cont`).
-            // `(size_t i, size_t j)` are the two indexes that `std::sort` wants to compare.
-            // The lambda's body returns true if the element at index `i` (in the original container)
-            // should come before the element at index `j`.
+            // Sort 'indexes' based on the values in the container (lambda function).
+            // This lambda captures the container reference and sorts indexes based on the elements.
             std::sort(indexes.begin(), indexes.end(),
-                    [&](size_t i, size_t j) {
-                        // Access the actual elements in MyContainer using the indexes
-                        // and compare them directly.
-                        return cont.getElements()[i] < cont.getElements()[j];
-                    });
-            // End of sorting
+                [&](size_t a, size_t b) {
+                    // Ensure sorting is stable and handles equal elements correctly if needed
+                    return cont.getElements()[a] < cont.getElements()[b];
+                });
 
-            // If this is an 'end' iterator, set its position to one past the last element.
-            if (!is_begin_iterator) {
+            if (is_end_iterator_flag) { // For end iterator
                 current_index_in_sorted_indexes = indexes.size();
+            } else { // For begin iterator
+                current_index_in_sorted_indexes = 0;
             }
         }
 
@@ -168,7 +160,9 @@ public:
         //Pre-increment operator (++it).
         //Advances the iterator to the next element in the sorted sequence.
         AscendingOrderIterator& operator++() {
-            current_index_in_sorted_indexes++; // Move to the next index in our sorted list
+            if (current_index_in_sorted_indexes < indexes.size()) {
+                current_index_in_sorted_indexes++; // Move to the next index in our sorted list
+            } 
             return *this;
         }
 
@@ -198,10 +192,10 @@ public:
 
     // Begin and end methods for AscendingOrderIterator.
     AscendingOrderIterator begin_ascending_order() const {
-        return AscendingOrderIterator(*this, true); // true indicates this is a begin iterator
+        return AscendingOrderIterator(*this, false); // false indicates this is a begin iterator
     }
     AscendingOrderIterator end_ascending_order() const {
-        return AscendingOrderIterator(*this, false); // false indicates this is an end iterator
+        return AscendingOrderIterator(*this, true); // true indicates this is an end iterator
     }
 
     // --- Other iterator types would be implemented similarly ---
@@ -212,8 +206,7 @@ public:
     // ReverseOrderIterator end_reverse_order() const;
 
     // Global operator<< for MyContainer for easy printing.
-    template <typename T>
-    std::ostream& operator<<(std::ostream& os, const MyContainer<T>& container) {
+    friend std::ostream& operator<<(std::ostream& os, const MyContainer<T>& container) {
         os << "MyContainer elements: [";
         for (size_t i = 0; i < container.elements.size(); ++i) {
             os << container.elements[i];
@@ -224,4 +217,4 @@ public:
         os << "]";
         return os;
     }
-};
+};//end of MyContainer class

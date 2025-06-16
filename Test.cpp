@@ -12,7 +12,7 @@ TEST_CASE("MyContainer basic operations") {
 
     SUBCASE("Adding elements and checking size") {
         MyContainer<int> container;
-        CHECK(container.size() == 0); // בדיקה שהמכולה ריקה בהתחלה
+        CHECK(container.size() == 0); // Check that the container is initially empty
 
         container.addElement(10);
         CHECK(container.size() == 1);
@@ -56,7 +56,7 @@ TEST_CASE("MyContainer basic operations") {
         container.addElement(20);
 
         CHECK_THROWS_AS(container.removeElement(50), std::runtime_error);
-        CHECK(container.size() == 2); // ודא שהגודל לא השתנה
+        CHECK(container.size() == 2); // make sure size remains unchanged
     }
 
     SUBCASE("Removing from an empty container throws exception") {
@@ -148,8 +148,6 @@ TEST_CASE("OrderIterator operations") {
         CHECK_FALSE(it_begin != it_end);
 
         // Dereferencing an empty iterator should throw
-        // This is important because the loop condition `it != container.end_order()` prevents dereferencing `end_order()`
-        // but if someone manually tries to dereference begin_order() on an empty container.
         CHECK_THROWS_AS(*it_begin, std::out_of_range);
     }
 

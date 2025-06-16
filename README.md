@@ -133,3 +133,8 @@ Navigate to the project's root directory in your terminal and use the `make` com
 * **Error Handling**: Iterators throw `std::out_of_range` when attempting to dereference an iterator pointing to an invalid position (such as `end()` or past it).
 * **Snapshot Logic**: Iterators like `AscendingOrderIterator`, `DescendingOrderIterator`, `SideCrossOrderIterator`, and `MiddleOutOrderIterator` build a "snapshot" of the element/index order at their creation time. This means that modifications to the container (adding/removing elements) *after* an existing iterator has been created will not affect the traversal order of that specific iterator, but will affect any new iterators created subsequently.
 * **Memory Management**: The container and its iterators utilize `std::vector` for element storage, benefiting from automatic memory management.
+
+## References and AI using
+- AI-assisted planning and structure, with no code given (e.g., project structure visualization, did not totally follow the suggestions).
+- AI-assisted documentations with auto-complete (VScode IDE).
+- AI-assisted README drafting and designing.

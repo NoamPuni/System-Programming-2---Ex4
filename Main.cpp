@@ -5,7 +5,9 @@
 #include <algorithm>
 #include <stdexcept>
 
+using namespace Container;
 int main() {
+    
     // create a container of integers
     MyContainer<int> intContainer;
     intContainer.addElement(10);

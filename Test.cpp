@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <string>
 #include "MyContainer.hpp"
-
+using namespace Container;
 TEST_CASE("MyContainer basic operations") {
 
     SUBCASE("Adding elements and checking size") {

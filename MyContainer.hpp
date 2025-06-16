@@ -19,11 +19,13 @@ namespace Container {
         }
 
         void removeElement(const T& element) {
+            auto original_size = elements.size();
             auto it = std::remove(elements.begin(), elements.end(), element);
-            if (it == elements.end()) {
+            elements.erase(it, elements.end());
+            
+            if (elements.size() == original_size) {
                 throw std::runtime_error("Element not found in container.");
             }
-            elements.erase(it, elements.end());
         }
 
         size_t size() const {
